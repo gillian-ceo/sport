@@ -59,8 +59,19 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 
 async function init() {
   bindChromeEvents();
+  const bundledConfig = getBundledSupabaseConfig();
   const savedConfig = readJSON(STORAGE_KEYS.config);
   const localMode = localStorage.getItem(STORAGE_KEYS.localMode) === "true";
+  const isAuthCallback = hasSupabaseAuthCallback();
+
+  if (bundledConfig && window.supabase && (!localMode || isAuthCallback)) {
+    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(bundledConfig));
+    localStorage.removeItem(STORAGE_KEYS.localMode);
+    elements.supabaseUrl.value = bundledConfig.url;
+    elements.supabaseAnonKey.value = bundledConfig.anonKey;
+    await configureSupabase(bundledConfig.url, bundledConfig.anonKey);
+    return;
+  }
 
   if (savedConfig?.url && savedConfig?.anonKey && window.supabase) {
     elements.supabaseUrl.value = savedConfig.url;
@@ -75,6 +86,30 @@ async function init() {
   }
 
   showSetup();
+}
+
+function getBundledSupabaseConfig() {
+  const config = window.PROGRESSFIT_SUPABASE;
+  const url = config?.url?.trim();
+  const anonKey = config?.anonKey?.trim();
+
+  if (!url || !anonKey) return null;
+  if (url.includes("xxxx.supabase.co") || anonKey.includes("eyJ...")) return null;
+
+  return { url, anonKey };
+}
+
+function hasSupabaseAuthCallback() {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+  return (
+    query.has("code") ||
+    query.has("error") ||
+    hash.has("access_token") ||
+    hash.has("refresh_token") ||
+    hash.has("error_description")
+  );
 }
 
 function bindChromeEvents() {
@@ -124,7 +159,14 @@ function bindChromeEvents() {
 
 async function configureSupabase(url, anonKey) {
   try {
-    state.client = window.supabase.createClient(url, anonKey);
+    state.client = window.supabase.createClient(url, anonKey, {
+      auth: {
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
+        flowType: "pkce"
+      }
+    });
     state.mode = "supabase";
     state.client.auth.onAuthStateChange(async (_event, session) => {
       state.user = session?.user ?? null;
@@ -164,7 +206,7 @@ async function sendMagicLink() {
   const { error } = await state.client.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: window.location.href.split("#")[0]
+      emailRedirectTo: getAuthRedirectUrl()
     }
   });
 
@@ -175,6 +217,10 @@ async function sendMagicLink() {
   }
 
   notify("Lien envoyé. Ouvre-le depuis ton email pour synchroniser l’app.");
+}
+
+function getAuthRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
 }
 
 async function enterLocalMode() {
