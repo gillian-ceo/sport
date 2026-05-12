@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProgressFit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230fa870'/%3E%3Cpath d='M12 29h40v6H12zM16 22h7v20h-7zM41 22h7v20h-7zM28 23a9 9 0 1 0 0 18h8a9 9 0 1 0 0-18h-8zm0 6h8a3 3 0 1 1 0 6h-8a3 3 0 1 1 0-6z' fill='white'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./config.js"></script>
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+
+      <!-- ── Topbar ── -->
+      <header class="topbar">
+        <div class="topbar-brand">
+          <div class="topbar-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 8H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2"/>
+              <path d="M18 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/>
+              <path d="M6 12h12"/>
+              <path d="M9 6v12M15 6v12"/>
+            </svg>
+          </div>
+          <div class="topbar-wordmark">
+            <span class="eyebrow">Application</span>
+            <span class="topbar-title">ProgressFit</span>
+          </div>
+        </div>
+        <div class="status-pill" id="connectionStatus">Initialisation</div>
+      </header>
+
+      <!-- ── Setup Panel ── -->
+      <section id="setupPanel" class="setup-panel hidden" aria-labelledby="setupTitle">
+        <div>
+          <p class="eyebrow">Stockage</p>
+          <h2 id="setupTitle" style="margin-top:4px">Connecter Supabase</h2>
+          <p class="muted" style="margin-top:6px">
+            Colle l'URL du projet et la clé anon publique. Sans configuration, l'app peut tourner en mode local pour les essais.
+          </p>
+        </div>
+        <div class="setup-grid">
+          <label>
+            URL Supabase
+            <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+          </label>
+          <label>
+            Clé anon publique
+            <input id="supabaseAnonKey" type="text" placeholder="eyJ..." autocomplete="off" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="saveSupabaseConfig" class="primary-button">Enregistrer</button>
+          <button id="useLocalMode" class="secondary-button">Mode local</button>
+        </div>
+      </section>
+
+      <!-- ── Auth Panel ── -->
+      <section id="authPanel" class="setup-panel hidden" aria-labelledby="authTitle">
+        <div>
+          <p class="eyebrow">Connexion</p>
+          <h2 id="authTitle" style="margin-top:4px">Se connecter</h2>
+          <p class="muted" style="margin-top:6px">
+            Supabase enverra un lien magique à ton adresse email. Les données seront liées à ce compte.
+          </p>
+        </div>
+        <div class="setup-grid">
+          <label>
+            Email
+            <input id="authEmail" type="email" placeholder="toi@example.com" autocomplete="email" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="sendMagicLink" class="primary-button">Envoyer le lien</button>
+          <button id="resetSupabaseConfig" class="secondary-button">Changer Supabase</button>
+        </div>
+      </section>
+
+      <!-- ── Main App ── -->
+      <main id="mainApp" class="hidden">
+
+        <nav class="tabbar" aria-label="Navigation principale">
+          <button class="tab active" data-tab="session" aria-selected="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 8H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2"/>
+              <path d="M18 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/>
+              <path d="M6 12h12"/><path d="M9 6v12M15 6v12"/>
+            </svg>
+            <span class="tab-label">Séance</span>
+          </button>
+          <button class="tab" data-tab="history" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 8v4l3 3"/>
+              <circle cx="12" cy="12" r="9"/>
+            </svg>
+            <span class="tab-label">Historique</span>
+          </button>
+          <button class="tab" data-tab="progress" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <span class="tab-label">Progrès</span>
+          </button>
+          <button class="tab" data-tab="goals" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+            <span class="tab-label">Objectifs</span>
+          </button>
+          <button class="tab" data-tab="body" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 2a4 4 0 0 1 4 4 4 4 0 0 1-4 4 4 4 0 0 1-4-4 4 4 0 0 1 4-4z"/>
+              <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+            </svg>
+            <span class="tab-label">Corps</span>
+          </button>
+        </nav>
+
+        <section id="session"  class="tab-panel active" aria-label="Séance"></section>
+        <section id="history"  class="tab-panel"        aria-label="Historique"></section>
+        <section id="progress" class="tab-panel"        aria-label="Progrès"></section>
+        <section id="goals"    class="tab-panel"        aria-label="Objectifs"></section>
+        <section id="body"     class="tab-panel"        aria-label="Corps"></section>
+
+      </main>
+    </div>
+
+    <!-- ── Modal template ── -->
+    <template id="modalTemplate">
+      <div class="modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <h2></h2>
+            <button class="icon-button" data-close-modal aria-label="Fermer">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M18 6 6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-content"></div>
+        </div>
+      </div>
+    </template>
+
+    <script src="./app.js"></script>
+    <script src="./auth-fix.js"></script>
+  </body>
+</html>
